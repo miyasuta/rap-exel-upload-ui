@@ -1,0 +1,19 @@
+<core:FragmentDefinition 
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:l="sap.ui.layout"
+    xmlns:u="sap.ui.unified"
+    xmlns="sap.m">
+    <Dialog id="idFIleDialog" title="{i18n>uploadProductDialogTitle}">
+        <VBox id="idVbox" width="100%">
+            <core:InvisibleText id="idInvisibleText" text="{i18n>uploadProductDialogTitle}" />
+            <f:SimpleForm id="idSimpleForm" editable="true"
+                layout="ResponsiveGridLayout" maxContainerCols="2">
+                <f:content>
+                    <Label id="idFileUploadlabel" reqired="true" text="{i18n>upladProductFile}"/>
+                </f:content>
+            </f:SimpleForm>
+        </VBox>
+    </Dialog>
+
+</core:FragmentDefinition>
