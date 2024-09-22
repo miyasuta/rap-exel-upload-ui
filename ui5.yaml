@@ -19,6 +19,8 @@ server:
           - path: /sap
             url: https://0e4e7bd0-339a-47c7-aae6-a8f0cb52cf77.abap.us10.hana.ondemand.com
             destination: abap-cloud-default_abap-trial-91fec855trial-dev
+            scp: true
+            authenticationType: OAuth2UserTokenExchange
     - name: fiori-tools-appreload
       afterMiddleware: compression
       configuration:

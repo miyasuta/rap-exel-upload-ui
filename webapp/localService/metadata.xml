@@ -126,6 +126,12 @@
                 <Parameter Name="PreserveChanges" Type="Edm.Boolean" Nullable="false"/>
                 <ReturnType Type="com.sap.gateway.srvd.zui_yproduct_o4.v0001.ProductType" Nullable="false"/>
             </Action>
+            <Action Name="fileUpload" IsBound="true">
+                <Parameter Name="_it" Type="Collection(com.sap.gateway.srvd.zui_yproduct_o4.v0001.ProductType)" Nullable="false"/>
+                <Parameter Name="mimeType" Type="Edm.String" Nullable="false"/>
+                <Parameter Name="fileName" Type="Edm.String" Nullable="false"/>
+                <Parameter Name="fileContent" Type="Edm.Binary" Nullable="false"/>
+            </Action>
             <Action Name="Discard" IsBound="true">
                 <Parameter Name="_it" Type="com.sap.gateway.srvd.zui_yproduct_o4.v0001.ProductType" Nullable="false"/>
             </Action>
