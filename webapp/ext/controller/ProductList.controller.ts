@@ -10,6 +10,7 @@ import Message from 'sap/ui/core/message/Message';
 import MessageType from 'sap/ui/core/message/MessageType';
 import ODataContextBinding from 'sap/ui/model/odata/v4/ODataContextBinding';
 import Fragment from 'sap/ui/core/Fragment';
+import uFile from 'sap/ui/core/util/File';
 
 interface Error {
 	message: string
@@ -17,6 +18,13 @@ interface Error {
 		code: string
 		details: Error[] 
 	}
+}
+
+interface Template {
+	fileContent:string
+	fileName:string
+	mimeType:string
+	fileExtension:string
 }
 
 /**
@@ -28,6 +36,7 @@ export default class ProductList extends ControllerExtension<ExtensionAPI> {
 	fileType: string
 	fileName: string
 	fileContent: string | undefined
+	namespace = "com.sap.gateway.srvd.zui_yproduct_o4.v0001."
 
 	static overrides = {
 		/**
@@ -91,8 +100,7 @@ export default class ProductList extends ControllerExtension<ExtensionAPI> {
 		}
 
 		const model = this.base.getExtensionAPI().getModel()
-		const namespace = "com.sap.gateway.srvd.zui_yproduct_o4.v0001."
-		const operation = model?.bindContext("/Product/" + namespace + "fileUpload(...)") as ODataContextBinding
+		const operation = model?.bindContext("/Product/" + this.namespace + "fileUpload(...)") as ODataContextBinding
 		const funSuccess = () => {
 			model?.refresh()
 			const uploadSuccessMessage = resourceBundle.getText("uploadFileSuccMsg") || ""
@@ -141,6 +149,7 @@ export default class ProductList extends ControllerExtension<ExtensionAPI> {
 		operation.setParameter("mimeType", this.fileType)
 		operation.setParameter("fileName", this.fileName)
 		operation.setParameter("fileContent", this.fileContent)
+		operation.setParameter("fileExtension", this.fileName.split(".")[1])
 		operation.invoke().then(funSuccess, fnError)
 
 	}
@@ -149,5 +158,75 @@ export default class ProductList extends ControllerExtension<ExtensionAPI> {
 		this.dialog.close();
 		this.dialog.destroy()
 		this.fileContent = undefined
+	}
+
+	onTempDownload () {
+		const model = this.base.getExtensionAPI().getModel()
+		const resourceBundle = (this.base.getExtensionAPI().getModel("i18n") as ResourceModel).getResourceBundle() as ResourceBundle
+		const operation = model?.bindContext("/Product/" + this.namespace + "downloadFile(...)") as ODataContextBinding
+
+		const fnSuccess = () => {
+			const result = operation.getBoundContext().getObject() as Template
+			const fixedFileContent = this.fixCorruptedBase64(result.fileContent)
+			const uint8Array = Uint8Array.from(atob(fixedFileContent), c => c.charCodeAt(0))
+			const blob = new Blob([uint8Array], {type: result.mimeType})
+
+			const url = window.URL.createObjectURL(blob)
+			const a  = document.createElement('a') 
+			a.href = url
+			a.download = result.fileName + "." + result.fileExtension
+			document.body.appendChild(a)
+			a.click()
+			document.body.removeChild(a)
+			window.URL.revokeObjectURL(url)
+			
+			const downloadSuccessMessage = resourceBundle.getText("downloadTempSuccMsg") || ""
+			MessageToast.show(downloadSuccessMessage)			
+		}
+
+		const fnError = (oError:Error) => {
+			this.base.getExtensionAPI().getEditFlow().securedExecution(
+				() => {
+					Messaging.addMessages(
+						new Message({
+							message: oError.message,
+							target: "",
+							persistent: true,
+							type: MessageType.Error,
+							code: oError.error.code
+						})
+					)
+					const errorDetails = oError.error.details
+					errorDetails.forEach(error => {
+						Messaging.addMessages(
+							new Message({
+								message: error.message,
+								target: "",
+								persistent: true,
+								type: MessageType.Error,
+								code: error.error.code
+							})
+						)
+					})		
+				}
+			)			
+		}
+
+		operation.invoke().then(fnSuccess, fnError)
+	}
+
+	fixCorruptedBase64(corruptedBase64: string): string {
+		// apply URL safe Base64 transformation pattern
+		let fixedBase64 = corruptedBase64
+			.replace(/_/g, '/')  // replace '_' with '/'
+			.replace(/-/g, '+');  // replace '-' with '+'
+	
+		// // Add padding
+		// const padding = fixedBase64.length % 4;
+		// if (padding > 0) {
+		// 	fixedBase64 += '='.repeat(4 - padding); 
+		// }
+	
+		return fixedBase64;
 	}
 }
