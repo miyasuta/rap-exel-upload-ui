@@ -54,7 +54,6 @@ export default class ProductList extends ControllerExtension<ExtensionAPI> {
 		this.base.getExtensionAPI().loadFragment({
 			id: "uploadFileDialog",
 			name: "miyasuta.rapexcelupload.ext.fragment.uploadFileDialog",
-			// type: "XML",
 			controller: this
 		}).then(fragment => {
 			this.dialog = (fragment as unknown) as Dialog
