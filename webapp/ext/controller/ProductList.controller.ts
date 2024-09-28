@@ -87,10 +87,13 @@ export default class ProductList extends ControllerExtension<ExtensionAPI> {
 			})
 		}
 
-		this.base.getExtensionAPI().getEditFlow().securedExecution(() => readFile(file))
+		this.base.getExtensionAPI().getEditFlow().securedExecution(() => readFile(file), {
+			busy: { set: true }
+		})
 	}
 
 	onUploadPress() {
+		//ファイルコンテンツが存在するかチェック
 		const resourceBundle = (this.base.getExtensionAPI().getModel("i18n") as ResourceModel).getResourceBundle() as ResourceBundle
 		if (this.fileContent === undefined || this.fileContent === "") {
 			const fileErrorMessage = resourceBundle.getText("uploadFileErrMeg") || ""
@@ -98,6 +101,7 @@ export default class ProductList extends ControllerExtension<ExtensionAPI> {
 			return
 		}
 
+		//アクション呼び出しの準備
 		const model = this.base.getExtensionAPI().getModel()
 		const operation = model?.bindContext("/Product/" + this.namespace + "fileUpload(...)") as ODataContextBinding
 		const funSuccess = () => {
@@ -145,12 +149,13 @@ export default class ProductList extends ControllerExtension<ExtensionAPI> {
 			)
 		}
 
+		//アクションに渡すパラメータを設定
 		operation.setParameter("mimeType", this.fileType)
 		operation.setParameter("fileName", this.fileName)
 		operation.setParameter("fileContent", this.fileContent)
 		operation.setParameter("fileExtension", this.fileName.split(".")[1])
+		//アクション実行
 		operation.invoke().then(funSuccess, fnError)
-
 	}
 
 	onCancelPress () {
@@ -160,24 +165,29 @@ export default class ProductList extends ControllerExtension<ExtensionAPI> {
 	}
 
 	onTempDownload () {
+		//アクション呼び出しの準備		
 		const model = this.base.getExtensionAPI().getModel()
 		const resourceBundle = (this.base.getExtensionAPI().getModel("i18n") as ResourceModel).getResourceBundle() as ResourceBundle
 		const operation = model?.bindContext("/Product/" + this.namespace + "downloadFile(...)") as ODataContextBinding
 
 		const fnSuccess = () => {
 			const result = operation.getBoundContext().getObject() as Template
-			const fixedFileContent = this.fixCorruptedBase64(result.fileContent)
+			//base64の形式を修正
+			const fixedFileContent = this.convertBase64(result.fileContent)
+			//base64形式のファイルコンテンツをデコードしたものをバイナリデータに変換
 			const uint8Array = Uint8Array.from(atob(fixedFileContent), c => c.charCodeAt(0))
+			//Blobオブジェクトを生成
 			const blob = new Blob([uint8Array], {type: result.mimeType})
-
-			const url = window.URL.createObjectURL(blob)
-			const a  = document.createElement('a') 
-			a.href = url
-			a.download = result.fileName + "." + result.fileExtension
-			document.body.appendChild(a)
-			a.click()
-			document.body.removeChild(a)
-			window.URL.revokeObjectURL(url)
+			//ファイルをダウンロード
+			uFile.save(blob as unknown as string, result.fileName, result.fileExtension, result.mimeType, 'utf-8');
+			// const url = window.URL.createObjectURL(blob)
+			// const a  = document.createElement('a') 
+			// a.href = url
+			// a.download = result.fileName + "." + result.fileExtension
+			// document.body.appendChild(a)
+			// a.click()
+			// document.body.removeChild(a)
+			// window.URL.revokeObjectURL(url)
 			
 			const downloadSuccessMessage = resourceBundle.getText("downloadTempSuccMsg") || ""
 			MessageToast.show(downloadSuccessMessage)			
@@ -214,18 +224,17 @@ export default class ProductList extends ControllerExtension<ExtensionAPI> {
 		operation.invoke().then(fnSuccess, fnError)
 	}
 
-	fixCorruptedBase64(corruptedBase64: string): string {
+	convertBase64(urlSafeBase64: string): string {
 		// apply URL safe Base64 transformation pattern
-		let fixedBase64 = corruptedBase64
+		let standardBase64 = urlSafeBase64
 			.replace(/_/g, '/')  // replace '_' with '/'
 			.replace(/-/g, '+');  // replace '-' with '+'
 	
 		// // Add padding
-		// const padding = fixedBase64.length % 4;
+		// const padding = standardBase64.length % 4;
 		// if (padding > 0) {
-		// 	fixedBase64 += '='.repeat(4 - padding); 
+		// 	standardBase64 += '='.repeat(4 - padding); 
 		// }
-	
-		return fixedBase64;
+		return standardBase64;
 	}
 }
